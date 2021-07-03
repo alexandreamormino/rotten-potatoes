@@ -48,7 +48,7 @@ jobs:
       with:
         method: kubeconfig
         kubeconfig: ${{ secrets.K8S_CONFIG }}
-    - name: Deploy to Kubernetes cluster
+    - name: Deploy Mongo
       uses: Azure/k8s-deploy@v1
       with:
         manifests: |
