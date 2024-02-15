@@ -1,0 +1,92 @@
+port 888
+# transmit encapsulated tunnel traffic over TCP or UDP? 
+# UDP - much faster, still reliable because TCP over UDP is still TCP
+# TCP - slower but providers who might block VPN don't expect somone uses TCP
+;proto tcp
+proto udp
+dev tun
+# SSL/TLS root certificate (ca), certificate (cert), and private key (key).  
+# ﻿Each client and the server must have their own cert and key file. 
+#﻿ The server and all clients will use the same ca file.
+# See the "easy-rsa" directory for a series of scripts for generating RSA certificates
+# and private keys.  Remember to use a unique Common Name for the server
+# and each of the client certificates.
+ca keys/ca.crt
+cert keys/server.crt
+# This file should be kept secret
+key keys/server.key  
+# Diffie hellman parameters. we don't use it because use EC instead
+dh none
+# Network topology. Should be subnet (addressing via IP)
+# unless Windows clients v2.0.9 and lower have to be supported 
+# ﻿(then net30, i.e. a /30 per client). Defaults to net30 (not recommended)
+topology subnet
+# Configure server mode and supply a VPN subnet for OpenVPN to draw client addresses
+#﻿ from. The server will take 10.8.0.1 for itself, the rest will be made available 
+# ﻿to clients. Each client will be able to reach the server on 10.8.0.1. 
+# ﻿Comment this line out if you are ethernet bridging. See the man page for more info.
+server 10.8.0.0 255.255.255.0
+# IPv6 subnet
+server-ipv6 2001:db8:0:123::/64
+crl-verify keys/crl.pem
+# Push routes to the client to allow it to reach other private subnets behind
+# the server.  Remember that these private subnets will also need to know to route 
+# ﻿the OpenVPN client address pool (10.8.0.0/255.255.255.0) back to the OpenVPN server.
+;push "route 192.168.10.0 255.255.255.0"
+;push "route 192.168.20.0 255.255.255.0"
+# To assign specific IP addresses to specific clients or if a connecting client 
+# has a private subnet behind it that should also have VPN access, use subdirectory 
+# ﻿"ccd" for client-specific configuration files (see man page for more info).
+# If enabled, this directive will configure
+# all clients to redirect their default
+# network gateway through the VPN, causing
+# all IP traffic such as web browsing and
+# and DNS lookups to go through the VPN
+# (The OpenVPN server machine may need to NAT
+# or bridge the TUN/TAP interface to the internet
+# in order for this to work properly).
+push "redirect-gateway ipv6 def1 bypass-dhcp"
+# The addresses below refer to the public DNS servers
+push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 8.8.4.4"
+# The keepalive directive causes ping-like messages to be sent back and forth over
+# the link so that each side knows when the other side has gone down.
+# Ping every 10 seconds, assume that remote peer is down if no ping received during
+# a 120 second time period.
+keepalive 10 120
+# For extra security beyond that provided by SSL/TLS, create an "HMAC firewall"
+# to help block DoS attacks and UDP port flooding. Generate with:
+#   openvpn --genkey --secret ta.key
+#
+# The server and each client must have a copy of this key.
+# The second parameter should be '0' on the server and '1' on the clients.
+;tls-auth ta.key 0 # This file is secret
+tls-crypt keys/ta.key
+# Select a cryptographic cipher. This config item must be same in client config
+cipher BF-CBC        # Blowfish (default)  
+;cipher DES-EDE3-CBC  # Triple-DES
+;cipher AES-256-GCM﻿  # AES 256 - for openvpn version 2.4+
+auth SHA256
+# Enable compression on the VPN link. If you enable it here, you must also
+# enable it in the client config file.
+comp-lzo
+# It's a good idea to reduce the OpenVPN daemon's privileges after initialization.
+# You can comment this out on Windows systems.
+user nobody
+group nogroup
+# The persist options will try to avoid accessing certain resources on restart
+# that may no longer be accessible because of the privilege downgrade.
+persist-key
+persist-tun
+# Output a short status file showing current connections, truncated
+# and rewritten every minute.
+status /tmp/openvpn-status.log 3
+# Set the appropriate level of log file verbosity.
+#
+# 0 is silent, except for fatal errors
+# 4 is reasonable for general usage
+# 5 and 6 can help to debug connection problems
+# 9 is extremely verbose
+verb 3
+tun-mtu             1500
+mssfix              1300
